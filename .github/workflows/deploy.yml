@@ -45,6 +45,7 @@ jobs:
           # Settings -> Secrets and variables -> Actions -> Repository secrets
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # If needed during build
 
       - name: Setup Pages

@@ -12,17 +12,70 @@ export const generateWithRetry = async (
   prompt: string,
   options: { model?: string; search?: boolean; json?: boolean; schema?: any } = {}
 ) => {
-  const response = await fetch('/api/gemini', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, options })
-  });
+  const models = [
+    options.model || 'gemini-3.1-flash-preview',
+    'gemini-3.1-pro-preview',
+    'gemini-3-flash-preview'
+  ];
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Server responded with ${response.status}`);
+  // Try to use provided key, otherwise fallback to Vite env
+  const actualKey = apiKey || (import.meta as any).env.VITE_GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : '');
+  
+  if (!actualKey || actualKey === 'MY_GEMINI_API_KEY') {
+    throw new Error('API Key missing. Please set VITE_GEMINI_API_KEY in your environment.');
   }
 
-  const data = await response.json();
-  return data.text;
+  const ai = new GoogleGenAI({ apiKey: actualKey });
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    for (const modelName of models) {
+      try {
+        const config: any = {};
+        if (options.search && attempt < MAX_RETRIES - 1) { // Disable search on the final retry attempt to bypass grounding-related 500 errors
+          config.tools = [{ googleSearch: {} }];
+        } else if (options.search) {
+           console.warn('Disabling search for the final retry attempt to bypass grounding issues');
+        }
+        if (options.json) {
+          config.responseMimeType = "application/json";
+        }
+        if (options.schema) {
+          config.responseMimeType = "application/json";
+          config.responseSchema = options.schema;
+        }
+        
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: Object.keys(config).length > 0 ? config : undefined
+        });
+
+        if (!response.text) throw new Error('Empty response from AI');
+        
+        return response.text;
+      } catch (err: any) {
+        const isRateLimit = err?.message?.includes('429') || err?.message?.includes('exhausted');
+        const isHighDemand = err?.message?.includes('high demand');
+        const isQuota = err?.message?.includes('quota');
+        const isNotFound = err?.message?.includes('404') || err?.message?.includes('not found');
+        const isInternalError = err?.message?.includes('500') || err?.message?.toLowerCase().includes('internal');
+        
+        console.warn(`Attempt ${attempt + 1} with model ${modelName} failed:`, err.message);
+
+        // Try the next model in the list
+        if (isRateLimit || isHighDemand || isQuota || isNotFound || isInternalError) {
+           if (modelName === models[models.length - 1]) {
+             // If we're at the last model, wait before the next attempt
+             await new Promise(r => setTimeout(r, SLEEP_BEFORE_RETRY_MS * (attempt + 1)));
+           }
+           continue; // Move to next model
+        }
+
+        // For other errors, just throw
+        throw err;
+      }
+    }
+  }
+
+  throw new Error('All models and retry attempts exhausted. Please try again in few minutes.');
 };

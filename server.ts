@@ -20,61 +20,68 @@ app.use(express.json({ limit: '10mb' }));
 app.use(cors());
 
 app.post("/api/gemini", async (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey === "") {
+      return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
+    }
 
-  const { prompt, options } = req.body;
-  const models = [
-    options?.model || 'gemini-3.1-flash-preview',
-    'gemini-3.1-pro-preview',
-    'gemini-3-flash-preview'
-  ];
+    const { prompt, options } = req.body;
+    const models = [
+      options?.model || 'gemini-3.1-flash-preview',
+      'gemini-3.1-pro-preview',
+      'gemini-3-flash-preview'
+    ];
 
-  const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey });
 
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    for (const modelName of models) {
-      try {
-        const config: any = {};
-        if (options?.search && attempt < MAX_RETRIES - 1) {
-          config.tools = [{ googleSearch: {} }];
-        }
-        if (options?.json) {
-          config.responseMimeType = "application/json";
-        }
-        if (options?.schema) {
-          config.responseMimeType = "application/json";
-          config.responseSchema = options.schema;
-        }
-        
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: prompt,
-          config: Object.keys(config).length > 0 ? config : undefined
-        });
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      for (const modelName of models) {
+        try {
+          const config: any = {};
+          if (options?.search && attempt < MAX_RETRIES - 1) {
+            config.tools = [{ googleSearch: {} }];
+          }
+          if (options?.json) {
+            config.responseMimeType = "application/json";
+          }
+          if (options?.schema) {
+            config.responseMimeType = "application/json";
+            config.responseSchema = options.schema;
+          }
+          
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+            config: Object.keys(config).length > 0 ? config : undefined
+          });
 
-        if (!response.text) throw new Error('Empty response from AI');
-        
-        return res.json({ text: response.text });
-      } catch (err: any) {
-        const isRateLimit = err?.message?.includes('429') || err?.message?.includes('exhausted');
-        const isHighDemand = err?.message?.includes('high demand');
-        const isQuota = err?.message?.includes('quota');
-        const isNotFound = err?.message?.includes('404') || err?.message?.includes('not found');
-        const isInternalError = err?.message?.includes('500') || err?.message?.toLowerCase().includes('internal');
-        
-        if (isRateLimit || isHighDemand || isQuota || isNotFound || isInternalError) {
-           if (modelName === models[models.length - 1]) {
-             await new Promise(r => setTimeout(r, SLEEP_BEFORE_RETRY_MS * (attempt + 1)));
-           }
-           continue; 
+          if (!response.text) throw new Error('Empty response from AI');
+          
+          return res.json({ text: response.text });
+        } catch (err: any) {
+          const isRateLimit = err?.message?.includes('429') || err?.message?.includes('exhausted');
+          const isHighDemand = err?.message?.includes('high demand');
+          const isQuota = err?.message?.includes('quota');
+          const isNotFound = err?.message?.includes('404') || err?.message?.includes('not found');
+          const isInternalError = err?.message?.includes('500') || err?.message?.toLowerCase().includes('internal');
+          
+          if (isRateLimit || isHighDemand || isQuota || isNotFound || isInternalError) {
+             if (modelName === models[models.length - 1]) {
+               await new Promise(r => setTimeout(r, SLEEP_BEFORE_RETRY_MS * (attempt + 1)));
+             }
+             continue; 
+          }
+          throw err;
         }
-        throw err;
       }
     }
-  }
 
-  res.status(500).json({ error: 'All models and retry attempts exhausted.' });
+    res.status(500).json({ error: 'All models and retry attempts exhausted.' });
+  } catch (error: any) {
+    console.error("Gemini API Error:", error);
+    res.status(400).json({ error: error.message || "Unknown error occurred" });
+  }
 });
 const PORT = 3000;
 const DB_PATH = path.join(process.cwd(), "db.json");
