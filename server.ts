@@ -16,6 +16,9 @@ const SLEEP_BEFORE_RETRY_MS = 2000;
 const MAX_RETRIES = 3;
 
 const app = express();
+app.use(express.json({ limit: '10mb' }));
+app.use(cors());
+
 app.post("/api/gemini", async (req, res) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
@@ -76,9 +79,6 @@ app.post("/api/gemini", async (req, res) => {
 const PORT = 3000;
 const DB_PATH = path.join(process.cwd(), "db.json");
 const dbEvents = new EventEmitter();
-
-app.use(express.json({ limit: '10mb' }));
-app.use(cors());
 
 // Database Routes
 app.get("/api/db", (req, res) => {
