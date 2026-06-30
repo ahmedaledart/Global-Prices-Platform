@@ -60,7 +60,7 @@ export const MarketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const { data: commodities, error: supaError } = await Promise.race([
         supabase
           .from('commodities')
-          .select('*')
+          .select('id,symbol,name_ar,name_en,sector,price,previous_price,change_value,change_percent,trend,unit,source,updated_at,status,is_visible')
           .eq('status', 'active')
           .eq('is_visible', true)
           .order('updated_at', { ascending: false })
@@ -152,7 +152,7 @@ export const MarketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           .eq('status', 'published')
           .eq('is_visible', true)
           .order('created_at', { ascending: false })
-          .limit(5),
+          .limit(3),
         timeoutPromise
       ]) as any;
       
@@ -176,7 +176,7 @@ export const MarketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           .select('*')
           .eq('status', 'published')
           .order('created_at', { ascending: false })
-          .limit(5),
+          .limit(3),
         timeoutPromise
       ]) as any;
       

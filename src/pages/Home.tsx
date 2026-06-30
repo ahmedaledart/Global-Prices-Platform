@@ -90,7 +90,7 @@ export const Home = () => {
         </div>
       </section>
 
-      <AdvancedTable />
+      <AdvancedTable limit={20} />
       <WhyChooseUs />
       <NewsSection />
     </>

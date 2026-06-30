@@ -8,7 +8,8 @@ export const LiveTicker = () => {
   const { data } = useMarketData();
   const { language } = useLanguage();
   // Duplicate data to create a seamless loop
-  const tickerItems = [...data, ...data];
+  const tickerData = data.slice(0, 20);
+  const tickerItems = [...tickerData, ...tickerData];
 
   return (
     <div className="bg-[#121E3D] border-b border-[#1C2E5A] overflow-hidden whitespace-nowrap py-2 flex items-center">

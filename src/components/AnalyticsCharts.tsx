@@ -1,21 +1,21 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useMarketData } from '../context/MarketContext';
 import { useLanguage } from '../context/LanguageContext';
-import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { BarChart2, PieChart, TrendingUp, FileSpreadsheet, FileText, FileCode, Image as ImageIcon, Filter } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toPng } from 'html-to-image';
+import { supabase } from '../lib/supabase';
 
 export const AnalyticsCharts = () => {
   const { data: commoditiesData } = useMarketData();
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<'energy' | 'metals' | 'commodities'>('energy');
+  const [selectedSymbol, setSelectedSymbol] = useState<string>('');
+  const [historyData, setHistoryData] = useState<any[]>([]);
   const chartRef = useRef<HTMLDivElement>(null);
-  const metricsDropdownRef = useRef<HTMLDivElement>(null);
-  const [showMetricsDropdown, setShowMetricsDropdown] = useState(false);
-  const [visibleMetrics, setVisibleMetrics] = useState<Record<string, boolean>>({});
 
   const energyData = commoditiesData.filter(c => c.sector === 'energy');
   const metalsData = commoditiesData.filter(c => c.sector === 'metals');
@@ -24,30 +24,45 @@ export const AnalyticsCharts = () => {
   const currentData = activeTab === 'energy' ? energyData : activeTab === 'metals' ? metalsData : basicCommoditiesData;
 
   useEffect(() => {
-    const initialMetrics: Record<string, boolean> = {};
-    currentData.forEach(item => {
-      initialMetrics[item.id] = true;
-    });
-    setVisibleMetrics(initialMetrics);
-  }, [activeTab]);
+    if (currentData.length > 0 && !currentData.some(c => c.symbol === selectedSymbol)) {
+      setSelectedSymbol(currentData[0].symbol);
+    }
+  }, [activeTab, currentData]);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (metricsDropdownRef.current && !metricsDropdownRef.current.contains(event.target as Node)) {
-        setShowMetricsDropdown(false);
+    const fetchHistory = async () => {
+      if (!selectedSymbol) return;
+      try {
+        const { data, error } = await supabase
+          .from('commodity_price_history')
+          .select('symbol, name_ar, name_en, price, recorded_at, created_at')
+          .eq('symbol', selectedSymbol)
+          .order('recorded_at', { ascending: true });
+        
+        if (data && !error) {
+          setHistoryData(data);
+        } else {
+          setHistoryData([]);
+        }
+      } catch (err) {
+        console.error('Error fetching history:', err);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    fetchHistory();
+  }, [selectedSymbol]);
 
-  const toggleMetric = (id: string) => {
-    setVisibleMetrics(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+  const historyChartData = useMemo(() => {
+    return historyData.map(item => ({
+      date: item.recorded_at || item.created_at,
+      dateLabel: new Date(item.recorded_at || item.created_at).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US'),
+      price: Number(item.price || 0),
+      symbol: item.symbol,
+      name: language === 'ar' ? item.name_ar : item.name_en
+    }));
+  }, [historyData, language]);
 
   const chartData = useMemo(() => {
     return currentData
-      .filter(item => visibleMetrics[item.id] !== false)
       .map(item => ({
         name: language === 'ar' ? item.nameAr : item.nameEn,
         symbol: item.symbol,
@@ -56,7 +71,22 @@ export const AnalyticsCharts = () => {
         changeValue: Number(item.changeAmount || 0),
         trend: item.trend
       }));
-  }, [currentData, language, visibleMetrics]);
+  }, [currentData, language]);
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-[#0F172A] border border-[#334155] rounded-xl p-3 shadow-xl text-white text-sm" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="font-bold text-[#D4AF37] mb-1">{data.name || data.symbol}</div>
+          <div>{language === 'ar' ? 'التاريخ' : 'Date'}: {data.dateLabel}</div>
+          <div>{language === 'ar' ? 'السعر' : 'Price'}: {Number(data.price).toFixed(2)}</div>
+          <div>{language === 'ar' ? 'الرمز' : 'Symbol'}: {data.symbol}</div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   const colors = ['#D4AF37', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -72,7 +102,7 @@ export const AnalyticsCharts = () => {
     const wb = XLSX.utils.book_new();
     
     // Add Comparison Data
-    const wsComparison = XLSX.utils.json_to_sheet(chartData);
+    const wsComparison = XLSX.utils.json_to_sheet(historyChartData);
     XLSX.utils.book_append_sheet(wb, wsComparison, "Performance History");
     
     // Add Summary Data
@@ -101,8 +131,8 @@ export const AnalyticsCharts = () => {
     // @ts-ignore
     const finalY = doc.lastAutoTable.finalY || 20;
     doc.text(t('performanceComparison'), 14, finalY + 15);
-    const tableColumn = Object.keys(chartData[0] || {});
-    const tableRows = chartData.map(item => Object.values(item).map(val => typeof val === 'number' ? val.toFixed(2) : val));
+    const tableColumn = Object.keys(historyChartData[0] || {});
+    const tableRows = historyChartData.map(item => Object.values(item).map(val => typeof val === 'number' ? val.toFixed(2) : val));
     
     autoTable(doc, {
       head: [tableColumn],
@@ -124,7 +154,7 @@ export const AnalyticsCharts = () => {
     }, `${activeTab}_summary.csv`, { bookType: 'csv' });
 
     // 2. History CSV
-    const wsComparison = XLSX.utils.json_to_sheet(chartData);
+    const wsComparison = XLSX.utils.json_to_sheet(historyChartData);
     XLSX.writeFile({
       SheetNames: ["History"],
       Sheets: { "History": wsComparison }
@@ -181,32 +211,21 @@ export const AnalyticsCharts = () => {
               </button>
             </div>
             <div className="flex items-center gap-2 px-2">
-              <div className="relative" ref={metricsDropdownRef}>
-                <button 
-                  onClick={() => setShowMetricsDropdown(!showMetricsDropdown)}
-                  className="p-2 text-[#D4AF37] hover:bg-[#1C2E5A] rounded-lg transition-colors flex items-center gap-2"
-                  title={t('metrics') || 'Metrics'}
+              <div className="relative">
+                <select
+                  value={selectedSymbol}
+                  onChange={(e) => setSelectedSymbol(e.target.value)}
+                  className="bg-[#121E3D] text-[#D4AF37] border border-[#1C2E5A] rounded-lg p-2 text-sm outline-none focus:ring-1 focus:ring-[#D4AF37] appearance-none cursor-pointer pr-8"
                 >
-                  <Filter size={18} />
-                </button>
-                {showMetricsDropdown && (
-                  <div className={`absolute top-full mt-2 ${language === 'ar' ? 'left-0' : 'right-0'} bg-[#121E3D] border border-[#1C2E5A] rounded-lg shadow-xl p-3 z-50 min-w-[200px]`}>
-                    <h4 className="text-white text-sm font-bold mb-2 border-b border-[#1C2E5A] pb-2">{t('metrics') || 'Metrics'}</h4>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {currentData.map(item => (
-                        <label key={item.id} className="flex items-center gap-2 cursor-pointer text-gray-300 hover:text-white transition-colors">
-                          <input 
-                            type="checkbox" 
-                            checked={visibleMetrics[item.id] !== false} 
-                            onChange={() => toggleMetric(item.id)}
-                            className="rounded border-[#1C2E5A] bg-[#0A1128] text-[#D4AF37] focus:ring-[#D4AF37]"
-                          />
-                          <span className="text-sm">{language === 'ar' ? item.nameAr : item.nameEn}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  {currentData.map(item => (
+                    <option key={item.symbol} value={item.symbol}>
+                      {language === 'ar' ? item.nameAr : item.nameEn}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute top-1/2 right-2 -translate-y-1/2 pointer-events-none text-[#D4AF37]">
+                  <Filter size={14} />
+                </div>
               </div>
               <button onClick={exportToExcel} className="p-2 text-[#10B981] hover:bg-[#1C2E5A] rounded-lg transition-colors" title={t('downloadExcel')}>
                 <FileSpreadsheet size={18} />
@@ -232,31 +251,48 @@ export const AnalyticsCharts = () => {
               {t('performanceComparison')}
             </h3>
             <div className="w-full h-[360px]" dir="ltr">
-              {chartData.length === 0 ? (
+              {historyChartData.length === 0 ? (
                 <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  {language === 'ar' ? 'لا توجد بيانات كافية لعرض الرسم البياني لهذا القطاع' : 'Not enough data to display chart for this sector'}
+                  {language === 'ar' ? 'لا توجد بيانات تاريخية كافية لعرض الرسم البياني' : 'Not enough historical data to display the chart'}
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1C2E5A" vertical={false} />
-                    <XAxis dataKey="name" stroke="#6B7280" fontSize={12} tickMargin={10} />
-                    <YAxis stroke="#6B7280" fontSize={12} tickFormatter={(val) => `${val}%`} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#121E3D', borderColor: '#1C2E5A', color: '#fff', borderRadius: '8px' }}
-                      itemStyle={{ color: '#fff' }}
-                      formatter={(value: number) => [`${value}%`, language === 'ar' ? 'مقارنة الأداء نسبة التغير %' : 'Change %']}
-                    />
-                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                    <Bar dataKey="change" name={language === 'ar' ? 'مقارنة الأداء نسبة التغير %' : 'Change %'} radius={[4, 4, 0, 0]}>
-                      {
-                        chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.change > 0 || entry.trend === 'up' ? '#10B981' : entry.change < 0 || entry.trend === 'down' ? '#EF4444' : '#D4AF37'} />
-                        ))
-                      }
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="relative w-full h-[360px] rounded-2xl overflow-hidden">
+                  <img
+                    src="/logo.png"
+                    alt="watermark"
+                    className="absolute inset-0 m-auto w-48 opacity-5 pointer-events-none select-none"
+                  />
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={historyChartData}>
+                      <CartesianGrid
+                        strokeDasharray="0"
+                        vertical={false}
+                        stroke="#334155"
+                        opacity={0.35}
+                      />
+                      <XAxis
+                        dataKey="dateLabel"
+                        tick={{ fill: '#94A3B8', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fill: '#94A3B8', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Line
+                        type="linear"
+                        dataKey="price"
+                        stroke="#F97316"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 5, fill: '#F97316' }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </div>
           </div>

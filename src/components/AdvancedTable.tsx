@@ -54,7 +54,7 @@ const Sparkline = ({ data, trend }: { data: any[], trend: 'up' | 'down' | 'neutr
   );
 };
 
-export const AdvancedTable = () => {
+export const AdvancedTable = ({ limit }: { limit?: number }) => {
   const { data: commoditiesData, connected, loading, error, lastUpdate, latency, isMockData } = useMarketData();
   const { t, language } = useLanguage();
   const location = useLocation();
@@ -400,8 +400,12 @@ export const AdvancedTable = () => {
       });
     }
 
+    if (limit) {
+      filterableData = filterableData.slice(0, limit);
+    }
+
     return filterableData;
-  }, [debouncedSearchTerm, selectedSector, sortConfig, commoditiesData, language]);
+  }, [debouncedSearchTerm, selectedSector, sortConfig, commoditiesData, language, limit]);
 
   const renderSortIcon = (key: keyof typeof commoditiesData[0]) => {
     // Map language specific keys back to base for icon rendering
