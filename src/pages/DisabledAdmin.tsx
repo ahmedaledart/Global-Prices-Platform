@@ -18,13 +18,13 @@ const DisabledAdmin = () => {
         <ShieldAlert className="text-[#D4AF37] mx-auto mb-8 opacity-90" size={80} />
         
         <h1 className="text-2xl md:text-3xl font-black text-white mb-6 tracking-tight">
-          {language === 'ar' ? 'لوحة التحكم الداخلية متوقفة مؤقتًا' : 'Internal Admin Board is Temporarily Disabled'}
+          {language === 'ar' ? 'لوحة التحكم غير متاحة من المنصة العامة' : 'Admin Panel is not available from the public platform'}
         </h1>
         
         <p className="text-gray-400 text-lg leading-relaxed font-bold mb-10">
           {language === 'ar' 
-            ? 'يتم إدارة بيانات المنصة حاليًا من خلال Supabase Dashboard.' 
-            : 'Platform data is currently managed via Supabase Dashboard.'}
+            ? 'يرجى استخدام لوحة ADMIN-GCP المستقلة.' 
+            : 'Please use the independent ADMIN-GCP panel.'}
         </p>
 
         <Link 

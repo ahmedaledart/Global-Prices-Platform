@@ -99,7 +99,7 @@ class AppErrorBoundary extends React.Component<{children: React.ReactNode}, {has
                   localStorage.clear();
                   sessionStorage.clear();
                 }
-                window.location.href = window.location.pathname + '#/admin/login'; 
+                window.location.href = window.location.pathname + '#/'; 
               }} 
               className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-xl font-bold uppercase text-sm transition-all shadow-lg"
             >
@@ -168,6 +168,8 @@ const AppRoutes = () => {
         <Route path={formattedPath} element={<DisabledAdmin />} />
         <Route path="/admin" element={<DisabledAdmin />} />
         <Route path="/admin/*" element={<DisabledAdmin />} />
+        <Route path="/control" element={<DisabledAdmin />} />
+        <Route path="/control/*" element={<DisabledAdmin />} />
         <Route path="*" element={<Home />} />
       </Routes>
     </Suspense>
