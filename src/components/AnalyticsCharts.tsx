@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useMarketData } from '../context/MarketContext';
 import { useLanguage } from '../context/LanguageContext';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { BarChart2, PieChart, TrendingUp, FileSpreadsheet, FileText, FileCode, Image as ImageIcon, Filter } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -11,16 +11,17 @@ import { toPng } from 'html-to-image';
 export const AnalyticsCharts = () => {
   const { data: commoditiesData } = useMarketData();
   const { t, language } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'energy' | 'metals'>('energy');
+  const [activeTab, setActiveTab] = useState<'energy' | 'metals' | 'commodities'>('energy');
   const chartRef = useRef<HTMLDivElement>(null);
   const metricsDropdownRef = useRef<HTMLDivElement>(null);
   const [showMetricsDropdown, setShowMetricsDropdown] = useState(false);
   const [visibleMetrics, setVisibleMetrics] = useState<Record<string, boolean>>({});
 
-  const energyData = commoditiesData.filter(c => c.sectorAr === 'الطاقة');
-  const metalsData = commoditiesData.filter(c => c.sectorAr === 'المعادن');
+  const energyData = commoditiesData.filter(c => c.sector === 'energy');
+  const metalsData = commoditiesData.filter(c => c.sector === 'metals');
+  const basicCommoditiesData = commoditiesData.filter(c => c.sector === 'commodities');
 
-  const currentData = activeTab === 'energy' ? energyData : metalsData;
+  const currentData = activeTab === 'energy' ? energyData : activeTab === 'metals' ? metalsData : basicCommoditiesData;
 
   useEffect(() => {
     const initialMetrics: Record<string, boolean> = {};
@@ -44,43 +45,26 @@ export const AnalyticsCharts = () => {
     setVisibleMetrics(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Prepare data for comparison chart (using normalized values for demonstration)
-  const comparisonData = useMemo(() => {
-    if (!currentData || currentData.length === 0) return [];
-    
-    // Find the item with history to act as a reference for time points
-    const referenceItem = currentData.find(item => item.history && item.history.length > 0);
-    if (!referenceItem) return [];
-
-    return referenceItem.history.map((point, index) => {
-      const dataPoint: any = { time: point.time };
-      currentData.forEach(item => {
-        const itemName = language === 'ar' ? item.nameAr : item.nameEn;
-        
-        // Safety check for history existence and length
-        if (item.history && item.history[0] && item.history[index]) {
-          const startPrice = item.history[0].price || 1; // Avoid division by zero
-          const currentPrice = item.history[index].price || 0;
-          // Normalize to percentage change from start for fair comparison
-          dataPoint[itemName] = ((currentPrice - startPrice) / startPrice) * 100;
-        } else {
-          // Default to 0 change if history is missing for this point/item
-          dataPoint[itemName] = 0;
-        }
-      });
-      return dataPoint;
-    });
-  }, [currentData, language]);
+  const chartData = useMemo(() => {
+    return currentData
+      .filter(item => visibleMetrics[item.id] !== false)
+      .map(item => ({
+        name: language === 'ar' ? item.nameAr : item.nameEn,
+        symbol: item.symbol,
+        price: Number(item.price || 0),
+        change: Number(item.changePercent || 0),
+        changeValue: Number(item.changeAmount || 0),
+        trend: item.trend
+      }));
+  }, [currentData, language, visibleMetrics]);
 
   const colors = ['#D4AF37', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6', '#EC4899'];
 
   const getSummaryExportData = () => {
-    return currentData.map(item => ({
-      [t('commodity')]: language === 'ar' ? item.nameAr : item.nameEn,
-      [t('sector')]: language === 'ar' ? item.sectorAr : item.sectorEn,
+    return chartData.map(item => ({
+      [t('commodity')]: item.name,
       [t('currentPrice')]: item.price,
-      [t('changePercent')]: `${item.changePercent}%`,
-      [t('status')]: language === 'ar' ? item.statusAr : item.statusEn,
+      [t('changePercent')]: `${item.change}%`,
     }));
   };
 
@@ -88,7 +72,7 @@ export const AnalyticsCharts = () => {
     const wb = XLSX.utils.book_new();
     
     // Add Comparison Data
-    const wsComparison = XLSX.utils.json_to_sheet(comparisonData);
+    const wsComparison = XLSX.utils.json_to_sheet(chartData);
     XLSX.utils.book_append_sheet(wb, wsComparison, "Performance History");
     
     // Add Summary Data
@@ -117,8 +101,8 @@ export const AnalyticsCharts = () => {
     // @ts-ignore
     const finalY = doc.lastAutoTable.finalY || 20;
     doc.text(t('performanceComparison'), 14, finalY + 15);
-    const tableColumn = Object.keys(comparisonData[0] || {});
-    const tableRows = comparisonData.map(item => Object.values(item).map(val => typeof val === 'number' ? val.toFixed(2) : val));
+    const tableColumn = Object.keys(chartData[0] || {});
+    const tableRows = chartData.map(item => Object.values(item).map(val => typeof val === 'number' ? val.toFixed(2) : val));
     
     autoTable(doc, {
       head: [tableColumn],
@@ -140,7 +124,7 @@ export const AnalyticsCharts = () => {
     }, `${activeTab}_summary.csv`, { bookType: 'csv' });
 
     // 2. History CSV
-    const wsComparison = XLSX.utils.json_to_sheet(comparisonData);
+    const wsComparison = XLSX.utils.json_to_sheet(chartData);
     XLSX.writeFile({
       SheetNames: ["History"],
       Sheets: { "History": wsComparison }
@@ -188,6 +172,12 @@ export const AnalyticsCharts = () => {
                 className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'metals' ? 'bg-[#1C2E5A] text-[#D4AF37] shadow-lg' : 'text-gray-400 hover:text-white'}`}
               >
                 {t('metalsSector')}
+              </button>
+              <button 
+                onClick={() => setActiveTab('commodities')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'commodities' ? 'bg-[#1C2E5A] text-[#D4AF37] shadow-lg' : 'text-gray-400 hover:text-white'}`}
+              >
+                {language === 'ar' ? 'السلع الأساسية' : 'Commodities'}
               </button>
             </div>
             <div className="flex items-center gap-2 px-2">
@@ -241,34 +231,33 @@ export const AnalyticsCharts = () => {
               <TrendingUp size={18} className="text-[#D4AF37]" />
               {t('performanceComparison')}
             </h3>
-            <div className="h-80 w-full" dir="ltr">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={comparisonData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1C2E5A" vertical={false} />
-                  <XAxis dataKey="time" stroke="#6B7280" fontSize={12} tickMargin={10} />
-                  <YAxis stroke="#6B7280" fontSize={12} tickFormatter={(val) => `${val.toFixed(1)}%`} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#121E3D', borderColor: '#1C2E5A', color: '#fff', borderRadius: '8px' }}
-                    itemStyle={{ color: '#fff' }}
-                    formatter={(value: number) => [`${value.toFixed(2)}%`, '']}
-                  />
-                  <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                  {currentData.filter(item => visibleMetrics[item.id] !== false).map((item, index) => {
-                    const itemName = language === 'ar' ? item.nameAr : item.nameEn;
-                    return (
-                      <Line 
-                        key={item.id} 
-                        type="monotone" 
-                        dataKey={itemName} 
-                        stroke={colors[index % colors.length]} 
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 6, strokeWidth: 0 }}
-                      />
-                    );
-                  })}
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="w-full h-[360px]" dir="ltr">
+              {chartData.length === 0 ? (
+                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  {language === 'ar' ? 'لا توجد بيانات كافية لعرض الرسم البياني لهذا القطاع' : 'Not enough data to display chart for this sector'}
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1C2E5A" vertical={false} />
+                    <XAxis dataKey="name" stroke="#6B7280" fontSize={12} tickMargin={10} />
+                    <YAxis stroke="#6B7280" fontSize={12} tickFormatter={(val) => `${val}%`} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#121E3D', borderColor: '#1C2E5A', color: '#fff', borderRadius: '8px' }}
+                      itemStyle={{ color: '#fff' }}
+                      formatter={(value: number) => [`${value}%`, language === 'ar' ? 'مقارنة الأداء نسبة التغير %' : 'Change %']}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <Bar dataKey="change" name={language === 'ar' ? 'مقارنة الأداء نسبة التغير %' : 'Change %'} radius={[4, 4, 0, 0]}>
+                      {
+                        chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.change > 0 || entry.trend === 'up' ? '#10B981' : entry.change < 0 || entry.trend === 'down' ? '#EF4444' : '#D4AF37'} />
+                        ))
+                      }
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
 
@@ -279,16 +268,16 @@ export const AnalyticsCharts = () => {
               <h3 className="text-lg font-bold text-white mb-4">{t('sectorSummary')}</h3>
               
               <div className="space-y-4 relative z-10 max-h-64 overflow-y-auto pr-2">
-                {currentData.filter(item => visibleMetrics[item.id] !== false).map((item, index) => (
-                  <div key={item.id} className="flex items-center justify-between border-b border-[#2A4075]/50 pb-3 last:border-0 last:pb-0">
+                {chartData.map((item, index) => (
+                  <div key={item.symbol} className="flex items-center justify-between border-b border-[#2A4075]/50 pb-3 last:border-0 last:pb-0">
                     <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colors[index % colors.length] }}></div>
-                      <span className="text-sm text-gray-300">{language === 'ar' ? item.nameAr : item.nameEn}</span>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.change > 0 || item.trend === 'up' ? '#10B981' : item.change < 0 || item.trend === 'down' ? '#EF4444' : '#D4AF37' }}></div>
+                      <span className="text-sm text-gray-300">{item.name}</span>
                     </div>
                     <div className="text-left" dir="ltr">
                       <div className="text-sm font-bold text-white">{(item.price || 0).toFixed(2)}</div>
-                      <div className={`text-xs ${item.trend === 'up' ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-                        {item.trend === 'up' ? '+' : ''}{(item.changePercent || 0).toFixed(2)}%
+                      <div className={`text-xs ${item.trend === 'up' || item.change > 0 ? 'text-[#10B981]' : item.trend === 'down' || item.change < 0 ? 'text-[#EF4444]' : 'text-[#D4AF37]'}`}>
+                        {item.change > 0 || item.trend === 'up' ? '+' : ''}{(item.change || 0).toFixed(2)}%
                       </div>
                     </div>
                   </div>
