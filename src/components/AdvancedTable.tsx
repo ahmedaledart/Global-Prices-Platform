@@ -343,14 +343,18 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
     logUserActivity('تصدير بيانات', 'قام المستخدم بتصدير البيانات بصيغة PDF');
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = limit || 50;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, selectedSector, sortConfig]);
+
   const filteredAndSortedData = useMemo(() => {
     let filterableData = commoditiesData;
 
     // Filter by sector
     if (selectedSector !== 'all') {
-      console.log('selectedSector:', selectedSector);
-      console.log('commodities sectors:', filterableData.map(c => c.sector));
-      
       filterableData = filterableData.filter(item => {
         const itemSector = item.sector || (item as any).sectorAr || (item as any).sectorEn;
         if (item.sector === selectedSector) return true;
@@ -363,7 +367,6 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
         if (selectedSector === 'forex' && (itemSector === 'العملات' || itemSector === 'Currencies')) return true;
         return false;
       });
-      console.log(`filtered results:`, filterableData.length);
     }
 
     // Filter by search
@@ -400,12 +403,19 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
       });
     }
 
-    if (limit) {
-      filterableData = filterableData.slice(0, limit);
-    }
-
     return filterableData;
-  }, [debouncedSearchTerm, selectedSector, sortConfig, commoditiesData, language, limit]);
+  }, [debouncedSearchTerm, selectedSector, sortConfig, commoditiesData, language]);
+
+  const paginatedData = useMemo(() => {
+    if (limit && location.pathname !== '/markets') {
+      return filteredAndSortedData.slice(0, limit);
+    }
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredAndSortedData.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredAndSortedData, currentPage, itemsPerPage, limit, location.pathname]);
+
+  const totalPages = limit && location.pathname !== '/markets' ? 1 : Math.ceil(filteredAndSortedData.length / itemsPerPage);
+
 
   const renderSortIcon = (key: keyof typeof commoditiesData[0]) => {
     // Map language specific keys back to base for icon rendering
@@ -579,12 +589,22 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
                     <td colSpan={10} className="p-8 text-center text-red-500">
                       <div className="flex flex-col items-center justify-center gap-3 bg-red-500/10 p-6 rounded-xl border border-red-500/20">
                         <AlertCircle size={32} />
-                        <p>{language === 'ar' ? 'فشل جلب البيانات: ' : 'Failed to retrieve data: '}{error}</p>
+                        <p>{language === 'ar' ? 'تعذر تحميل هذا الجزء مؤقتًا' : 'Temporarily unable to load this section'}</p>
                       </div>
                     </td>
                   </tr>
                 )}
-                {!loading && !error && filteredAndSortedData.map((item, index) => {
+                {!loading && !error && paginatedData.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="p-8 text-center text-gray-400">
+                      <div className="flex flex-col items-center justify-center gap-3">
+                        <Info size={32} className="text-gray-500" />
+                        <p>{language === 'ar' ? 'لا توجد أسعار متاحة حاليًا' : 'No prices available currently'}</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {!loading && !error && paginatedData.map((item, index) => {
                   const changePct = Number(item.changePercent) || 0;
                   const isUp = changePct > 0;
                   const isDown = changePct < 0;
@@ -781,10 +801,33 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
           )}
 
           {/* Table Footer */}
-          <div className="p-4 border-t border-[#1C2E5A] bg-[#0A1128] flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-gray-400">
-            <div>{t('totalResults')} <span className="text-white font-bold">{filteredAndSortedData.length}</span></div>
+          <div className="p-4 border-t border-[#1C2E5A] bg-[#0A1128] flex flex-col justify-between items-center gap-4 text-sm text-gray-400">
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2 mb-2 w-full justify-center">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 bg-[#121E3D] text-white rounded border border-[#1C2E5A] disabled:opacity-50"
+                >
+                  {language === 'ar' ? 'السابق' : 'Prev'}
+                </button>
+                <span className="text-white px-3 py-1 bg-[#1C2E5A] rounded border border-[#2A4075]">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 bg-[#121E3D] text-white rounded border border-[#1C2E5A] disabled:opacity-50"
+                >
+                  {language === 'ar' ? 'التالي' : 'Next'}
+                </button>
+              </div>
+            )}
             
-            <div className="flex flex-wrap items-center justify-center gap-6">
+            <div className="flex flex-col sm:flex-row justify-between w-full items-center gap-4">
+              <div>{t('totalResults')} <span className="text-white font-bold">{filteredAndSortedData.length}</span></div>
+              
+              <div className="flex flex-wrap items-center justify-center gap-6">
               {lastUpdate && !isNaN(lastUpdate.getTime()) && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs uppercase tracking-wider text-gray-500">{language === 'ar' ? 'آخر تحديث:' : 'Last Update:'}</span>
@@ -818,6 +861,7 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </div>
+  </section>
+);
 };

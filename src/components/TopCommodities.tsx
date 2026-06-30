@@ -44,7 +44,7 @@ export const TopCommodities = () => {
           <div className="container mx-auto px-4 text-center">
              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-8 max-w-2xl mx-auto text-red-500">
                 <Activity className="mx-auto mb-4" size={48} />
-                <h3 className="text-xl font-bold mb-2">تعذر تحميل بيانات السوق</h3>
+                <h3 className="text-xl font-bold mb-2">تعذر تحميل هذا الجزء مؤقتًا</h3>
                 <p>{error}</p>
              </div>
           </div>

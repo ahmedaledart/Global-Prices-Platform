@@ -8,7 +8,7 @@ export const LiveTicker = () => {
   const { data } = useMarketData();
   const { language } = useLanguage();
   // Duplicate data to create a seamless loop
-  const tickerData = data.slice(0, 20);
+  const tickerData = data.slice(0, 15);
   const tickerItems = [...tickerData, ...tickerData];
 
   return (

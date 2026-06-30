@@ -129,7 +129,7 @@ export const MarketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.warn('Supabase commodities fetch error:', err);
       // We don't block the app if fetch fails, just set empty data or keep existing
       if (data.length === 0) {
-        setError('تعذر تحميل البيانات');
+        setError('تعذر تحميل البيانات مؤقتًا');
         setConnected(false);
         setIsMockData(false);
         setData([]);
