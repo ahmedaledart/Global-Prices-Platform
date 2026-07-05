@@ -4,13 +4,10 @@ import { FileText, ChevronDown, Download, AlertCircle, Clock, BookOpen } from 'l
 import Markdown from 'react-markdown';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
 import { useMarketData } from '../context/MarketContext';
-import { AccessRestricted } from '../components/AccessRestricted';
 
 export const Reports = () => {
   const { language } = useLanguage();
-  const { platformUser } = useAuth();
   const { analyses: analysesData, loading: marketLoading } = useMarketData();
   const [reports, setReports] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<any>(null);
@@ -61,10 +58,6 @@ export const Reports = () => {
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#D4AF37]"></div>
       </div>
     );
-  }
-
-  if (platformUser?.approval_status !== 'approved' || !platformUser?.is_active) {
-    return <AccessRestricted />;
   }
 
   return (

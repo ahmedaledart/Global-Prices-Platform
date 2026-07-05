@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
 export const Header = () => {
   const { t, language, setLanguage } = useLanguage();
   const { settings } = useSettings();
-  const { user, platformUser, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -133,41 +133,13 @@ export const Header = () => {
               <div className="hidden sm:flex flex-col items-end">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-black text-white uppercase tracking-tight">
-                    {platformUser?.full_name || user.email?.split('@')[0]}
+                    {user.email?.split('@')[0]}
                   </span>
 
                   <div className="w-8 h-8 rounded-xl bg-[#121E3D] border border-[#1C2E5A] flex items-center justify-center text-[#D4AF37] shadow-inner overflow-hidden">
                     <User size={18} />
                   </div>
                 </div>
-
-                {platformUser && (
-                  <div
-                    className={`text-[8px] font-black uppercase tracking-[0.2em] mt-1 px-2 py-0.5 rounded-full border ${
-                      platformUser.approval_status === 'approved'
-                        ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                        : platformUser.approval_status === 'pending'
-                        ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                        : 'bg-red-500/10 text-red-500 border-red-500/20'
-                    }`}
-                  >
-                    {platformUser.approval_status === 'approved'
-                      ? language === 'ar'
-                        ? 'مفعل'
-                        : 'Approved'
-                      : platformUser.approval_status === 'pending'
-                      ? language === 'ar'
-                        ? 'بانتظار الموافقة'
-                        : 'Pending Approval'
-                      : platformUser.approval_status === 'rejected'
-                      ? language === 'ar'
-                        ? 'مرفوض'
-                        : 'Rejected'
-                      : language === 'ar'
-                      ? 'موقوف'
-                      : 'Deactivated'}
-                  </div>
-                )}
               </div>
 
               <button

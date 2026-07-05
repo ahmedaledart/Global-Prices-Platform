@@ -40,22 +40,6 @@ export const Auth = () => {
 
         if (authError) throw authError;
 
-        // Check platform_users status
-        const { data: userData, error: userError } = await supabase
-          .from('platform_users')
-          .select('*')
-          .eq('auth_user_id', authData.user.id)
-          .single();
-
-        if (userError && userError.code !== 'PGRST116') throw userError;
-
-        if (userData) {
-          if (!userData.is_active) {
-            await supabase.auth.signOut();
-            throw new Error(language === 'ar' ? 'تم إيقاف هذا الحساب يرجى التواصل مع إدارة المنصة' : 'This account has been suspended. Please contact support.');
-          }
-        }
-        
         navigate('/');
       } else {
         // Register logic
@@ -71,25 +55,7 @@ export const Auth = () => {
         if (authError) throw authError;
 
         if (authData.user) {
-          const payload = {
-            auth_user_id: authData.user.id,
-            email: formData.email,
-            full_name: formData.fullName,
-            phone: formData.phone,
-            organization: formData.organization,
-            job_title: formData.jobTitle,
-            approval_status: 'pending',
-            is_active: true,
-            created_at: new Date().toISOString()
-          };
-          
-          console.log('Registering platform user payload:', payload);
-
-          const { error: insertError } = await supabase.from('platform_users').insert([payload]);
-
-          if (insertError) throw insertError;
-
-          setSuccess(language === 'ar' ? 'تم إنشاء الحساب بنجاح. حسابك قيد المراجعة حالياً.' : 'Account created successfully. Your account is currently under review.');
+          setSuccess(language === 'ar' ? 'تم إنشاء الحساب بنجاح.' : 'Account created successfully.');
           setIsLogin(true);
         }
       }
@@ -245,7 +211,7 @@ export const Auth = () => {
               className="w-full bg-[#D4AF37] text-[#0A1128] py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-[#E5C158] transition-all shadow-xl shadow-[#D4AF37]/10 flex items-center justify-center gap-3 disabled:opacity-50"
             >
               {loading ? (
-                <Loader2 className="animate-spin" size={20} />
+               <Loader2 className="animate-spin" size={20} />
               ) : (
                 <>
                   {isLogin ? <ShieldCheck size={20} /> : <User size={20} />}
