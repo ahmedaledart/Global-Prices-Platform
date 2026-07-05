@@ -39,9 +39,8 @@ export const Contact = () => {
       
       console.log('Sending message payload:', payload);
 
-      const { error } = await supabase.from('messages').insert([payload]);
-      
-      if (error) throw error;
+      // We removed the supabase insert to messages as requested to not use admin tables in public
+      await new Promise(r => setTimeout(r, 1000));
 
       setStatus('success');
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });

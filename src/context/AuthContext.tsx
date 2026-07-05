@@ -34,7 +34,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (error) {
           console.warn('Session error:', error.message);
-          // If getSession fails, just proceed as guest
         }
         
         const currentUser = session?.user ?? null;
@@ -47,10 +46,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
-        if (isMounted) {
-          setUser(null);
-          setPlatformUser(null);
-        }
       } finally {
         if (isMounted) setLoading(false);
       }

@@ -11,7 +11,9 @@
   --ink: #ffffff;
 }
 
-body {
+html, body {
+  overflow-x: hidden;
+
   font-family: var(--font-sans);
   background-color: var(--bg);
   color: var(--ink);

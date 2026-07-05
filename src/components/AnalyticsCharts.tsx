@@ -37,10 +37,11 @@ export const AnalyticsCharts = () => {
           .from('commodity_price_history')
           .select('symbol, name_ar, name_en, price, recorded_at, created_at')
           .eq('symbol', selectedSymbol)
-          .order('recorded_at', { ascending: true });
+          .order('recorded_at', { ascending: false })
+          .limit(12);
         
         if (data && !error) {
-          setHistoryData(data);
+          setHistoryData(data.reverse());
         } else {
           setHistoryData([]);
         }
@@ -51,15 +52,30 @@ export const AnalyticsCharts = () => {
     fetchHistory();
   }, [selectedSymbol]);
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const historyChartData = useMemo(() => {
-    return historyData.map(item => ({
+    let rawData = historyData.map(item => ({
       date: item.recorded_at || item.created_at,
       dateLabel: new Date(item.recorded_at || item.created_at).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US'),
       price: Number(item.price || 0),
       symbol: item.symbol,
       name: language === 'ar' ? item.name_ar : item.name_en
     }));
-  }, [historyData, language]);
+
+    // Limit points based on screen size
+    const limit = isMobile ? 6 : 12;
+    if (rawData.length > limit) {
+      rawData = rawData.slice(-limit);
+    }
+    return rawData;
+  }, [historyData, language, isMobile]);
 
   const chartData = useMemo(() => {
     return currentData
@@ -88,8 +104,6 @@ export const AnalyticsCharts = () => {
     return null;
   };
 
-  const colors = ['#D4AF37', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6', '#EC4899'];
-
   const getSummaryExportData = () => {
     return chartData.map(item => ({
       [t('commodity')]: item.name,
@@ -100,72 +114,38 @@ export const AnalyticsCharts = () => {
 
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
-    
-    // Add Comparison Data
     const wsComparison = XLSX.utils.json_to_sheet(historyChartData);
     XLSX.utils.book_append_sheet(wb, wsComparison, "Performance History");
-    
-    // Add Summary Data
     const wsSummary = XLSX.utils.json_to_sheet(getSummaryExportData());
     XLSX.utils.book_append_sheet(wb, wsSummary, "Sector Summary");
-    
     XLSX.writeFile(wb, `${activeTab}_analytics.xlsx`);
   };
 
   const exportToPDF = () => {
     const doc = new jsPDF({ orientation: 'landscape' });
-    
-    // Add Summary Table
     doc.text(t('sectorSummary'), 14, 15);
     const summaryData = getSummaryExportData();
     const summaryColumn = Object.keys(summaryData[0] || {});
     const summaryRows = summaryData.map(item => Object.values(item));
-    
-    autoTable(doc, {
-      head: [summaryColumn],
-      body: summaryRows,
-      startY: 20,
-    });
-    
-    // Add Comparison Table
+    autoTable(doc, { head: [summaryColumn], body: summaryRows, startY: 20 });
     // @ts-ignore
     const finalY = doc.lastAutoTable.finalY || 20;
     doc.text(t('performanceComparison'), 14, finalY + 15);
     const tableColumn = Object.keys(historyChartData[0] || {});
     const tableRows = historyChartData.map(item => Object.values(item).map(val => typeof val === 'number' ? val.toFixed(2) : val));
-    
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: finalY + 20,
-    });
-    
+    autoTable(doc, { head: [tableColumn], body: tableRows, startY: finalY + 20 });
     doc.save(`${activeTab}_analytics.pdf`);
   };
 
   const exportToCSV = () => {
-    // For CSV, we'll download two separate files as CSV doesn't support multiple sheets
-    
-    // 1. Summary CSV
     const wsSummary = XLSX.utils.json_to_sheet(getSummaryExportData());
-    XLSX.writeFile({
-      SheetNames: ["Summary"],
-      Sheets: { "Summary": wsSummary }
-    }, `${activeTab}_summary.csv`, { bookType: 'csv' });
-
-    // 2. History CSV
+    XLSX.writeFile({ SheetNames: ["Summary"], Sheets: { "Summary": wsSummary } }, `${activeTab}_summary.csv`, { bookType: 'csv' });
     const wsComparison = XLSX.utils.json_to_sheet(historyChartData);
-    XLSX.writeFile({
-      SheetNames: ["History"],
-      Sheets: { "History": wsComparison }
-    }, `${activeTab}_history.csv`, { bookType: 'csv' });
+    XLSX.writeFile({ SheetNames: ["History"], Sheets: { "History": wsComparison } }, `${activeTab}_history.csv`, { bookType: 'csv' });
   };
 
   const exportToPNG = async () => {
-    if (chartRef.current === null) {
-      return;
-    }
-
+    if (chartRef.current === null) return;
     try {
       const dataUrl = await toPng(chartRef.current, { cacheBust: true, backgroundColor: '#0A1128' });
       const link = document.createElement('a');
@@ -179,43 +159,43 @@ export const AnalyticsCharts = () => {
 
   return (
     <section className="py-16 bg-[#121E3D] border-y border-[#1C2E5A]">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
           <div>
-            <h2 className="text-2xl font-bold text-white flex items-center gap-3 mb-2">
+            <h2 className="text-2xl md:text-4xl font-bold text-white flex items-center gap-3 mb-2">
               <BarChart2 className="text-[#D4AF37]" />
               {t('analyticsTitle')}
             </h2>
-            <p className="text-sm text-gray-400">{t('analyticsSub')}</p>
+            <p className="text-sm md:text-base text-gray-400">{t('analyticsSub')}</p>
           </div>
 
-          <div className="flex flex-col sm:flex-row bg-[#0A1128] p-1 rounded-lg border border-[#1C2E5A] gap-2">
-            <div className="flex bg-[#121E3D] rounded-md p-1">
+          <div className="flex flex-col sm:flex-row w-full md:w-auto bg-[#0A1128] p-1 rounded-lg border border-[#1C2E5A] gap-2">
+            <div className="flex w-full md:w-auto bg-[#121E3D] rounded-md p-1">
               <button 
                 onClick={() => setActiveTab('energy')}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'energy' ? 'bg-[#1C2E5A] text-[#D4AF37] shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md text-xs md:text-sm font-medium transition-all ${activeTab === 'energy' ? 'bg-[#1C2E5A] text-[#D4AF37] shadow-lg' : 'text-gray-400 hover:text-white'}`}
               >
                 {t('energySector')}
               </button>
               <button 
                 onClick={() => setActiveTab('metals')}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'metals' ? 'bg-[#1C2E5A] text-[#D4AF37] shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md text-xs md:text-sm font-medium transition-all ${activeTab === 'metals' ? 'bg-[#1C2E5A] text-[#D4AF37] shadow-lg' : 'text-gray-400 hover:text-white'}`}
               >
                 {t('metalsSector')}
               </button>
               <button 
                 onClick={() => setActiveTab('commodities')}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'commodities' ? 'bg-[#1C2E5A] text-[#D4AF37] shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-md text-xs md:text-sm font-medium transition-all ${activeTab === 'commodities' ? 'bg-[#1C2E5A] text-[#D4AF37] shadow-lg' : 'text-gray-400 hover:text-white'}`}
               >
-                {language === 'ar' ? 'السلع الأساسية' : 'Commodities'}
+                {language === 'ar' ? 'السلع' : 'Commodities'}
               </button>
             </div>
-            <div className="flex items-center gap-2 px-2">
-              <div className="relative">
+            <div className="flex items-center gap-2 px-2 pb-2 sm:pb-0 justify-between sm:justify-start w-full md:w-auto">
+              <div className="relative w-full sm:w-auto">
                 <select
                   value={selectedSymbol}
                   onChange={(e) => setSelectedSymbol(e.target.value)}
-                  className="bg-[#121E3D] text-[#D4AF37] border border-[#1C2E5A] rounded-lg p-2 text-sm outline-none focus:ring-1 focus:ring-[#D4AF37] appearance-none cursor-pointer pr-8"
+                  className="w-full bg-[#121E3D] text-[#D4AF37] border border-[#1C2E5A] rounded-lg p-2 text-sm outline-none focus:ring-1 focus:ring-[#D4AF37] appearance-none cursor-pointer pr-8"
                 >
                   {currentData.map(item => (
                     <option key={item.symbol} value={item.symbol}>
@@ -227,43 +207,45 @@ export const AnalyticsCharts = () => {
                   <Filter size={14} />
                 </div>
               </div>
-              <button onClick={exportToExcel} className="p-2 text-[#10B981] hover:bg-[#1C2E5A] rounded-lg transition-colors" title={t('downloadExcel')}>
-                <FileSpreadsheet size={18} />
-              </button>
-              <button onClick={exportToCSV} className="p-2 text-[#3B82F6] hover:bg-[#1C2E5A] rounded-lg transition-colors" title={t('downloadCsv')}>
-                <FileCode size={18} />
-              </button>
-              <button onClick={exportToPNG} className="p-2 text-[#D4AF37] hover:bg-[#1C2E5A] rounded-lg transition-colors" title={t('downloadPng')}>
-                <ImageIcon size={18} />
-              </button>
-              <button onClick={exportToPDF} className="p-2 text-[#EF4444] hover:bg-[#1C2E5A] rounded-lg transition-colors" title={t('downloadPdf')}>
-                <FileText size={18} />
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={exportToExcel} className="p-2 text-[#10B981] hover:bg-[#1C2E5A] rounded-lg transition-colors" title={t('downloadExcel')}>
+                  <FileSpreadsheet size={18} />
+                </button>
+                <button onClick={exportToCSV} className="p-2 text-[#3B82F6] hover:bg-[#1C2E5A] rounded-lg transition-colors" title={t('downloadCsv')}>
+                  <FileCode size={18} />
+                </button>
+                <button onClick={exportToPNG} className="p-2 text-[#D4AF37] hover:bg-[#1C2E5A] rounded-lg transition-colors" title={t('downloadPng')}>
+                  <ImageIcon size={18} />
+                </button>
+                <button onClick={exportToPDF} className="p-2 text-[#EF4444] hover:bg-[#1C2E5A] rounded-lg transition-colors" title={t('downloadPdf')}>
+                  <FileText size={18} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Comparison Chart */}
-          <div ref={chartRef} className="lg:col-span-2 bg-[#0A1128] rounded-2xl p-6 border border-[#1C2E5A] shadow-xl">
-            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+          <div ref={chartRef} className="lg:col-span-2 bg-[#0A1128] rounded-2xl p-4 md:p-6 border border-[#1C2E5A] shadow-xl">
+            <h3 className="text-base md:text-lg font-bold text-white mb-6 flex items-center gap-2">
               <TrendingUp size={18} className="text-[#D4AF37]" />
               {t('performanceComparison')}
             </h3>
-            <div className="w-full h-[360px]" dir="ltr">
+            <div className="w-full h-[280px] md:h-[360px] lg:h-[420px]" dir="ltr">
               {historyChartData.length === 0 ? (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm md:text-base text-center">
                   {language === 'ar' ? 'لا توجد بيانات تاريخية كافية لعرض الرسم البياني' : 'Not enough historical data to display the chart'}
                 </div>
               ) : (
-                <div className="relative w-full h-[360px] rounded-2xl overflow-hidden">
+                <div className="relative w-full h-full rounded-2xl overflow-hidden">
                   <img
                     src="/logo.png"
                     alt="watermark"
-                    className="absolute inset-0 m-auto w-48 opacity-5 pointer-events-none select-none"
+                    className="absolute inset-0 m-auto w-32 md:w-48 opacity-5 pointer-events-none select-none"
                   />
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={historyChartData}>
+                    <LineChart data={historyChartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                       <CartesianGrid
                         strokeDasharray="0"
                         vertical={false}
@@ -272,14 +254,15 @@ export const AnalyticsCharts = () => {
                       />
                       <XAxis
                         dataKey="dateLabel"
-                        tick={{ fill: '#94A3B8', fontSize: 12 }}
+                        tick={{ fill: '#94A3B8', fontSize: isMobile ? 10 : 12 }}
                         axisLine={false}
                         tickLine={false}
                       />
                       <YAxis
-                        tick={{ fill: '#94A3B8', fontSize: 12 }}
+                        tick={{ fill: '#94A3B8', fontSize: isMobile ? 10 : 12 }}
                         axisLine={false}
                         tickLine={false}
+                        width={60}
                       />
                       <Tooltip content={<CustomTooltip />} />
                       <Line
@@ -304,13 +287,13 @@ export const AnalyticsCharts = () => {
               <h3 className="text-lg font-bold text-white mb-4">{t('sectorSummary')}</h3>
               
               <div className="space-y-4 relative z-10 max-h-64 overflow-y-auto pr-2">
-                {chartData.map((item, index) => (
+                {chartData.map((item) => (
                   <div key={item.symbol} className="flex items-center justify-between border-b border-[#2A4075]/50 pb-3 last:border-0 last:pb-0">
                     <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.change > 0 || item.trend === 'up' ? '#10B981' : item.change < 0 || item.trend === 'down' ? '#EF4444' : '#D4AF37' }}></div>
-                      <span className="text-sm text-gray-300">{item.name}</span>
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.change > 0 || item.trend === 'up' ? '#10B981' : item.change < 0 || item.trend === 'down' ? '#EF4444' : '#D4AF37' }}></div>
+                      <span className="text-sm text-gray-300 truncate w-24 md:w-32">{item.name}</span>
                     </div>
-                    <div className="text-left" dir="ltr">
+                    <div className="text-left shrink-0" dir="ltr">
                       <div className="text-sm font-bold text-white">{(item.price || 0).toFixed(2)}</div>
                       <div className={`text-xs ${item.trend === 'up' || item.change > 0 ? 'text-[#10B981]' : item.trend === 'down' || item.change < 0 ? 'text-[#EF4444]' : 'text-[#D4AF37]'}`}>
                         {item.change > 0 || item.trend === 'up' ? '+' : ''}{(item.change || 0).toFixed(2)}%
@@ -321,7 +304,7 @@ export const AnalyticsCharts = () => {
               </div>
             </div>
 
-            <div className="bg-[#0A1128] rounded-2xl p-6 border border-[#1C2E5A] shadow-xl flex-grow flex flex-col justify-center items-center text-center">
+            <div className="bg-[#0A1128] rounded-2xl p-6 border border-[#1C2E5A] shadow-xl flex-grow flex flex-col justify-center items-center text-center min-h-[150px]">
               <PieChart size={48} className="text-[#D4AF37] mb-4 opacity-50" />
               <h4 className="text-white font-bold mb-2">{t('detailedReport')}</h4>
               <p className="text-xs text-gray-400 mb-4">{t('detailedReportDesc')}</p>

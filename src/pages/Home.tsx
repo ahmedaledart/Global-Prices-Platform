@@ -49,13 +49,13 @@ export const Home = () => {
       
       {/* Latest Intelligence Report Section */}
       <section className="bg-[#0A1128] py-8 border-b border-[#1C2E5A]/30">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <div className="bg-gradient-to-r from-[#121E3D] to-[#0A1128] rounded-2xl p-6 md:p-8 border border-[#1C2E5A] flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#D4AF37]/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-[#D4AF37]/10 transition-all"></div>
             
-            <div className="flex items-center gap-6 relative z-10">
-              <div className="w-16 h-16 rounded-full bg-[#D4AF37]/10 flex items-center justify-center shrink-0 border border-[#D4AF37]/20 shadow-inner">
-                <FileText className="text-[#D4AF37]" size={32} />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 relative z-10 w-full">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-[#D4AF37]/10 flex items-center justify-center shrink-0 border border-[#D4AF37]/20 shadow-inner">
+                <FileText className="text-[#D4AF37]" size={24} />
               </div>
               <div className="max-w-2xl">
                 <div className="flex items-center gap-2 mb-2">
@@ -66,10 +66,10 @@ export const Home = () => {
                     <TrendingUp size={12} /> {language === 'ar' ? 'تحليل ذكي' : 'Smart Analysis'}
                   </span>
                 </div>
-                <h3 className="text-xl md:text-2xl font-bold text-white mb-2 line-clamp-1">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-2 line-clamp-1">
                   {latestReport ? (language === 'ar' ? latestReport.titleAr : latestReport.titleEn) : (language === 'ar' ? 'التقارير التحليلية للأسواق' : 'Market Analytical Reports')}
                 </h3>
-                <p className="text-sm text-gray-400 line-clamp-1 opacity-80">
+                <p className="text-xs sm:text-sm text-gray-400 line-clamp-2 sm:line-clamp-1 opacity-80">
                   {latestReport 
                     ? (language === 'ar' ? latestReport.contentAr.substring(0, 100) : latestReport.contentEn.substring(0, 100)) + '...'
                     : (language === 'ar' 
@@ -81,9 +81,9 @@ export const Home = () => {
             
             <Link 
               to="/reports"
-              className="px-8 py-4 bg-[#D4AF37] text-[#0A1128] rounded-xl font-bold hover:bg-[#E5C158] transition-all flex items-center gap-2 shadow-xl shadow-[#D4AF37]/20 whitespace-nowrap active:scale-95 group relative z-10"
+              className="w-full md:w-auto px-6 py-3 sm:px-8 sm:py-4 bg-[#D4AF37] text-[#0A1128] rounded-xl font-bold hover:bg-[#E5C158] transition-all flex items-center justify-center gap-2 shadow-xl shadow-[#D4AF37]/20 whitespace-nowrap active:scale-95 group relative z-10"
             >
-              {language === 'ar' ? 'عرض التقرير الكامل' : 'View Full Report'}
+              {language === 'ar' ? 'عرض التقرير' : 'View Report'}
               <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
