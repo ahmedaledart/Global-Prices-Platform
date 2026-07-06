@@ -10,6 +10,13 @@ export const TopCommodities = () => {
   const { data, loading, error, isMockData } = useMarketData();
   const { t, language } = useLanguage();
   const [selectedCommodity, setSelectedCommodity] = useState<any>(null);
+
+  const formatPrice = (val: number | string | undefined | null) => {
+    if (val === null || val === undefined || val === '') return '---';
+    const num = Number(val);
+    if (isNaN(num)) return '---';
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
   
   if (loading) {
     return (
@@ -137,11 +144,11 @@ export const TopCommodities = () => {
                   <div className="flex justify-between items-center mt-2 text-[10px] uppercase tracking-wider text-gray-500 font-bold border-t border-[#1C2E5A] pt-2">
                     <div className="flex flex-col">
                        <span>{language === 'ar' ? 'الأعلى' : 'High'}</span>
-                       <span className="text-gray-300">{(item.high || item.price || 0).toFixed(2)}</span>
+                       <span className="text-gray-300">{formatPrice(item.high)}</span>
                     </div>
                     <div className="flex flex-col text-right">
                        <span>{language === 'ar' ? 'الأدنى' : 'Low'}</span>
-                       <span className="text-gray-300">{(item.low || item.price || 0).toFixed(2)}</span>
+                       <span className="text-gray-300">{formatPrice(item.low)}</span>
                     </div>
                   </div>
                   <div className="text-sm text-gray-400 mt-2">

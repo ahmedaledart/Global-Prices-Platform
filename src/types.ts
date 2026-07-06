@@ -16,8 +16,8 @@ export interface Commodity {
   prevClose: number;
   changeAmount: number;
   changePercent: number;
-  high: number;
-  low: number;
+  high?: number | null;
+  low?: number | null;
   unitAr: string;
   unitEn: string;
   currency?: string;

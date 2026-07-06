@@ -57,6 +57,13 @@ const Sparkline = ({ data, trend }: { data: any[], trend: 'up' | 'down' | 'neutr
 export const AdvancedTable = ({ limit }: { limit?: number }) => {
   const { data: commoditiesData, connected, loading, error, lastUpdate, latency, isMockData } = useMarketData();
   const { t, language } = useLanguage();
+  
+  const formatPrice = (val: number | string | undefined | null) => {
+    if (val === null || val === undefined || val === '') return '---';
+    const num = Number(val);
+    if (isNaN(num)) return '---';
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -259,8 +266,9 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
     
     // Helper to format numbers cleanly and consistently (1,234.56)
     const formatNumber = (val: number | string | undefined | null) => {
+      if (val === null || val === undefined || val === '') return '---';
       const num = Number(val);
-      if (isNaN(num)) return '0.00';
+      if (isNaN(num)) return '---';
       return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
@@ -671,14 +679,14 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
                       {visibleColumns.high && (
                         <td className={`p-4 ${language === 'ar' ? 'text-right' : 'text-left'} font-mono text-gray-400 hidden md:table-cell border-x border-[#1C2E5A]/30`} dir="ltr">
                            <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-                            {(item.high || 0).toFixed(2)}
+                            {formatPrice(item.high)}
                           </div>
                         </td>
                       )}
                       {visibleColumns.low && (
                         <td className={`p-4 ${language === 'ar' ? 'text-right' : 'text-left'} font-mono text-gray-400 hidden md:table-cell border-x border-[#1C2E5A]/30`} dir="ltr">
                            <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-                            {(item.low || 0).toFixed(2)}
+                            {formatPrice(item.low)}
                           </div>
                         </td>
                       )}
@@ -775,7 +783,7 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
                     </div>
                     <div>
                       <div className="text-[10px] text-gray-500 uppercase tracking-wider">{t('high')} / {t('low')}</div>
-                      <div className="text-xs text-gray-400 font-mono" dir="ltr">{(item.high || 0).toFixed(2)} / {(item.low || 0).toFixed(2)}</div>
+                      <div className="text-xs text-gray-400 font-mono" dir="ltr">{formatPrice(item.high)} / {formatPrice(item.low)}</div>
                     </div>
                     <div className="flex justify-end items-end">
                       <Sparkline data={item.history} trend={item.trend} />

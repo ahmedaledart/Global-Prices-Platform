@@ -60,7 +60,7 @@ export const MarketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const { data: commodities, error: supaError } = await Promise.race([
         supabase
           .from('commodities')
-          .select('id,symbol,name_ar,name_en,sector,price,previous_price,change_value,change_percent,trend,unit,source,updated_at,status,is_visible')
+          .select('id,symbol,name_ar,name_en,sector,price,previous_price,change_value,change_percent,trend,high,low,unit,source,updated_at,status,is_visible')
           .eq('status', 'active')
           .eq('is_visible', true)
           .order('updated_at', { ascending: false })
