@@ -459,9 +459,9 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
               <p className="text-sm text-gray-400">{t('tableSub')}</p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
               {/* Search */}
-              <div className="relative flex-grow lg:flex-grow-0">
+              <div className="relative w-full sm:w-auto flex-grow lg:flex-grow-0">
                 <Search size={18} className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-gray-400`} />
                 <input 
                   type="text" 
@@ -473,10 +473,10 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
               </div>
 
               {/* Sector Filter */}
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <Filter size={18} className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-gray-400`} />
                 <select 
-                  className={`appearance-none bg-[#0A1128] border border-[#1C2E5A] rounded-lg py-2 ${language === 'ar' ? 'pr-10 pl-8' : 'pl-10 pr-8'} text-white focus:outline-none focus:border-[#D4AF37] transition-colors cursor-pointer`}
+                  className={`w-full appearance-none bg-[#0A1128] border border-[#1C2E5A] rounded-lg py-2 ${language === 'ar' ? 'pr-10 pl-8' : 'pl-10 pr-8'} text-white focus:outline-none focus:border-[#D4AF37] transition-colors cursor-pointer`}
                   value={selectedSector}
                   onChange={(e) => setSelectedSector(e.target.value as any)}
                 >
@@ -752,7 +752,7 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="font-bold text-white text-lg">{name}</div>
+                      <div className="font-bold text-white text-lg truncate max-w-[200px]">{name}</div>
                       <div className="text-sm text-gray-500 font-mono">{item.symbol}</div>
                     </div>
                     <div className="text-right" dir="ltr">

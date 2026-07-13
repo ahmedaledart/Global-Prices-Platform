@@ -65,7 +65,14 @@ export const HistoricalArchive = () => {
             day: 'numeric'
           })
         }));
-        setFormattedHistory(formatted);
+        const isMobile = window.innerWidth < 768;
+        const maxPoints = isMobile ? 8 : 12;
+        let displayData = formatted;
+        if (formatted.length > maxPoints) {
+          const step = Math.ceil(formatted.length / maxPoints);
+          displayData = formatted.filter((_, index) => index % step === 0 || index === formatted.length - 1);
+        }
+        setFormattedHistory(displayData);
 
         const prices = filtered.map(d => d.price);
         setStats({
@@ -212,7 +219,7 @@ export const HistoricalArchive = () => {
               ) : (
                 <div className="flex-1 flex flex-col">
                   {/* Chart */}
-                  <div className="h-80 md:h-[400px] w-full mb-8" dir="ltr">
+                  <div className="w-full h-[280px] md:h-[360px] lg:h-[420px] mb-8" dir="ltr">
                     <ResponsiveContainer width="100%" height="100%">
                        <AreaChart data={formattedHistory}>
                           <defs>

@@ -54,7 +54,14 @@ export const CommodityHistoryModal: React.FC<CommodityHistoryModalProps> = ({ co
               day: 'numeric'
             })
           }));
-          setHistoryData(formattedData);
+          const isMobile = window.innerWidth < 768;
+          const maxPoints = isMobile ? 8 : 12;
+          let displayData = formattedData;
+          if (formattedData.length > maxPoints) {
+            const step = Math.ceil(formattedData.length / maxPoints);
+            displayData = formattedData.filter((_, index) => index % step === 0 || index === formattedData.length - 1);
+          }
+          setHistoryData(displayData);
 
           // Calculate stats
           const prices = data.map(d => d.price);
@@ -188,7 +195,7 @@ export const CommodityHistoryModal: React.FC<CommodityHistoryModalProps> = ({ co
                     </p>
                  </div>
                ) : (
-                 <div className="h-80 md:h-[400px] w-full" dir="ltr">
+                 <div className="w-full h-[280px] md:h-[360px] lg:h-[420px]" dir="ltr">
                     <ResponsiveContainer width="100%" height="100%">
                        <AreaChart data={historyData}>
                           <defs>
