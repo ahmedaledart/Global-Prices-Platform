@@ -24,24 +24,24 @@ export const Contact = () => {
     setErrorMessage('');
 
     try {
-      const payload = {
-        full_name: formData.name,
-        email: formData.email,
-        phone: formData.phone || '',
-        subject: formData.subject,
-        message: formData.message,
-        status: 'unread',
-        is_read: false,
-        source: 'contact_form',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          full_name: formData.name,
+          email: formData.email,
+          phone: formData.phone || '',
+          organization: '',
+          subject: formData.subject,
+          message: formData.message,
+          status: 'new',
+          is_read: false
+        });
+
+      if (error) {
+        console.error('Contact message submit error:', error);
+        throw error;
+      }
       
-      console.log('Sending message payload:', payload);
-
-      // We removed the supabase insert to messages as requested to not use admin tables in public
-      await new Promise(r => setTimeout(r, 1000));
-
       setStatus('success');
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
     } catch (error: any) {
