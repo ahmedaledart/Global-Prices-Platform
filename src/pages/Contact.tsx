@@ -22,6 +22,8 @@ export const Contact = () => {
     e.preventDefault();
     setStatus('sending');
     setErrorMessage('');
+    
+    console.log('Sending contact message...');
 
     try {
       const { error } = await supabase
@@ -30,7 +32,6 @@ export const Contact = () => {
           full_name: formData.name,
           email: formData.email,
           phone: formData.phone || '',
-          organization: '',
           subject: formData.subject,
           message: formData.message,
           status: 'new',
@@ -38,13 +39,16 @@ export const Contact = () => {
         });
 
       if (error) {
+        console.error('Insert failed:', error);
         console.error('Contact message submit error:', error);
         throw error;
       }
       
+      console.log('Insert success');
       setStatus('success');
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
     } catch (error: any) {
+      console.error('Insert failed:', error);
       console.error('Error sending message:', error);
       setErrorMessage(error.message || 'Unknown error occurred');
       setStatus('error');

@@ -6,12 +6,15 @@ import { useLanguage } from '../context/LanguageContext';
 import { useMarketData } from '../context/MarketContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PriceDisplay } from '../components/PriceDisplay';
+import { exportChartToPNG } from '../utils/exportChart';
 
 export const HistoricalArchive = () => {
   const { t, language } = useLanguage();
   const { history: historyData, fetchHistory, loading: marketLoading } = useMarketData();
   const [commodities, setCommodities] = useState<any[]>([]);
   const [selectedCommodityId, setSelectedCommodityId] = useState<string>('');
+  
+  const chartRef = React.useRef<HTMLDivElement>(null);
   
   const [formattedHistory, setFormattedHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -106,6 +109,26 @@ export const HistoricalArchive = () => {
   const changeVal = stats.lastPrice - stats.firstPrice;
   const changePct = stats.firstPrice > 0 ? (changeVal / stats.firstPrice) * 100 : 0;
   const isUp = changeVal >= 0;
+
+  const handleExport = async () => {
+    if (!chartRef.current || !selectedComm) return;
+    try {
+      const commodityName = language === 'ar' ? selectedComm.name_ar : selectedComm.name_en;
+      const chartTitle = language === 'ar' ? 'البيانات التاريخية' : 'Historical Data';
+      const dateRangeStr = `${new Date(stats.firstDate).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US')} - ${new Date(stats.lastDate).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US')}`;
+      
+      await exportChartToPNG({
+        element: chartRef.current,
+        filename: commodityName,
+        title: chartTitle,
+        subtitle: commodityName,
+        dateRange: dateRangeStr,
+        theme: 'dark'
+      });
+    } catch (err) {
+      console.error('Error exporting chart to PNG:', err);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0A1128] pt-24 pb-12">
@@ -217,9 +240,16 @@ export const HistoricalArchive = () => {
                   </p>
                 </div>
               ) : (
-                <div className="flex-1 flex flex-col">
+                <div className="flex-1 flex flex-col relative">
+                  <button 
+                    onClick={handleExport}
+                    className="absolute top-0 right-0 z-10 p-2 bg-[#0A1128] hover:bg-[#1C2E5A] border border-[#1C2E5A] text-[#D4AF37] rounded-lg transition-colors flex items-center gap-2"
+                    title={language === 'ar' ? 'تحميل الصورة' : 'Download Image'}
+                  >
+                    <Download size={16} />
+                  </button>
                   {/* Chart */}
-                  <div className="w-full h-[280px] md:h-[360px] lg:h-[420px] mb-8" dir="ltr">
+                  <div ref={chartRef} className="w-full h-[280px] md:h-[360px] lg:h-[420px] mb-8 relative pt-10" dir="ltr">
                     <ResponsiveContainer width="100%" height="100%">
                        <AreaChart data={formattedHistory}>
                           <defs>

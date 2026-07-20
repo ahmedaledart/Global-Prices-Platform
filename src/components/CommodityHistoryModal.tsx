@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, TrendingUp, TrendingDown, Minus, Activity, Info, Calendar } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Minus, Activity, Info, Calendar, Download } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { PriceDisplay } from './PriceDisplay';
+import { exportChartToPNG } from '../utils/exportChart';
 
 interface CommodityHistoryModalProps {
   commodity: any;
@@ -16,6 +17,8 @@ export const CommodityHistoryModal: React.FC<CommodityHistoryModalProps> = ({ co
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<number | 'all'>(7); // days
+  
+  const chartRef = useRef<HTMLDivElement>(null);
   
   const [stats, setStats] = useState({
     firstPrice: 0,
@@ -103,6 +106,27 @@ export const CommodityHistoryModal: React.FC<CommodityHistoryModalProps> = ({ co
   const changePct = stats.firstPrice > 0 ? (changeVal / stats.firstPrice) * 100 : 0;
   const isUp = changeVal >= 0;
 
+  const handleExport = async () => {
+    if (!chartRef.current || !commodity) return;
+    try {
+      const commodityName = language === 'ar' ? commodity.nameAr : commodity.nameEn;
+      const chartTitle = language === 'ar' ? 'المسار الزمني لحركة السعر' : 'Price Timeline Analysis';
+      const dateRangeStr = stats.firstDate && stats.lastDate ? 
+        `${new Date(stats.firstDate).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US')} - ${new Date(stats.lastDate).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US')}` : '';
+      
+      await exportChartToPNG({
+        element: chartRef.current,
+        filename: commodityName || commodity.symbol,
+        title: chartTitle,
+        subtitle: commodityName,
+        dateRange: dateRangeStr,
+        theme: 'dark'
+      });
+    } catch (err) {
+      console.error('Error exporting chart to PNG:', err);
+    }
+  };
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
@@ -176,6 +200,15 @@ export const CommodityHistoryModal: React.FC<CommodityHistoryModalProps> = ({ co
                      <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse"></div>
                      {language === 'ar' ? 'المسار الزمني لحركة السعر' : 'Price Timeline Analysis'}
                   </h3>
+                  {historyData.length >= 2 && (
+                    <button 
+                      onClick={handleExport}
+                      className="p-2 bg-[#121E3D] hover:bg-[#1C2E5A] border border-[#1C2E5A] text-[#D4AF37] rounded-lg transition-colors flex items-center justify-center"
+                      title={language === 'ar' ? 'تحميل الصورة' : 'Download Image'}
+                    >
+                      <Download size={16} />
+                    </button>
+                  )}
                </div>
                
                {loading ? (
@@ -195,7 +228,7 @@ export const CommodityHistoryModal: React.FC<CommodityHistoryModalProps> = ({ co
                     </p>
                  </div>
                ) : (
-                 <div className="w-full h-[280px] md:h-[360px] lg:h-[420px]" dir="ltr">
+                 <div ref={chartRef} className="w-full h-[280px] md:h-[360px] lg:h-[420px]" dir="ltr">
                     <ResponsiveContainer width="100%" height="100%">
                        <AreaChart data={historyData}>
                           <defs>

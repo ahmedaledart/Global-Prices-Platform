@@ -6,8 +6,10 @@ import { BarChart2, PieChart, TrendingUp, FileSpreadsheet, FileText, FileCode, I
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { toPng } from 'html-to-image';
+import html2canvas from 'html2canvas';
 import { supabase } from '../lib/supabase';
+
+import { exportChartToPNG } from '../utils/exportChart';
 
 export const AnalyticsCharts = () => {
   const { data: commoditiesData } = useMarketData();
@@ -147,13 +149,18 @@ export const AnalyticsCharts = () => {
   const exportToPNG = async () => {
     if (chartRef.current === null) return;
     try {
-      const dataUrl = await toPng(chartRef.current, { cacheBust: true, backgroundColor: '#0A1128' });
-      const link = document.createElement('a');
-      link.download = `${activeTab}_chart.png`;
-      link.href = dataUrl;
-      link.click();
+      const chartTitle = t('performanceComparison');
+      const commodityName = activeTab === 'energy' ? t('energy') : activeTab === 'metals' ? t('metals') : t('basicCommodities');
+      
+      await exportChartToPNG({
+        element: chartRef.current,
+        filename: commodityName,
+        title: chartTitle,
+        subtitle: commodityName,
+        theme: 'dark'
+      });
     } catch (err) {
-      console.error('oops, something went wrong!', err);
+      console.error('Error exporting chart to PNG:', err);
     }
   };
 
