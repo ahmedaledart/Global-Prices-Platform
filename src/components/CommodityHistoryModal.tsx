@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
 import { PriceDisplay } from './PriceDisplay';
 import { exportChartToPNG } from '../utils/exportChart';
+import { formatDisplayDate } from '../utils/formatDate';
 
 interface CommodityHistoryModalProps {
   commodity: any;
@@ -52,10 +53,7 @@ export const CommodityHistoryModal: React.FC<CommodityHistoryModalProps> = ({ co
         if (data && data.length > 0) {
           const formattedData = data.map(item => ({
             ...item,
-            time: new Date(item.recorded_at).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US', {
-              month: 'short',
-              day: 'numeric'
-            })
+            time: formatDisplayDate(item.recorded_at)
           }));
           const isMobile = window.innerWidth < 768;
           const maxPoints = isMobile ? 8 : 12;
@@ -112,7 +110,7 @@ export const CommodityHistoryModal: React.FC<CommodityHistoryModalProps> = ({ co
       const commodityName = language === 'ar' ? commodity.nameAr : commodity.nameEn;
       const chartTitle = language === 'ar' ? 'المسار الزمني لحركة السعر' : 'Price Timeline Analysis';
       const dateRangeStr = stats.firstDate && stats.lastDate ? 
-        `${new Date(stats.firstDate).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US')} - ${new Date(stats.lastDate).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US')}` : '';
+        `${formatDisplayDate(stats.firstDate)} - ${formatDisplayDate(stats.lastDate)}` : '';
       
       await exportChartToPNG({
         element: chartRef.current,
@@ -301,7 +299,7 @@ export const CommodityHistoryModal: React.FC<CommodityHistoryModalProps> = ({ co
                       { label: language === 'ar' ? 'أعلى سعر' : 'High Price', value: stats.highPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), color: 'text-green-500' },
                       { label: language === 'ar' ? 'أدنى سعر' : 'Low Price', value: stats.lowPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), color: 'text-red-500' },
                       { label: language === 'ar' ? 'الاتجاه العام' : 'General Trend', value: changePct > 0 ? (language === 'ar' ? 'صاعد' : 'Bullish') : changePct < 0 ? (language === 'ar' ? 'هابط' : 'Bearish') : (language === 'ar' ? 'مستقر' : 'Neutral'), color: changePct > 0 ? 'text-green-500' : changePct < 0 ? 'text-red-500' : 'text-gray-500', icon: changePct > 0 ? <TrendingUp size={14} /> : changePct < 0 ? <TrendingDown size={14} /> : <Minus size={14} /> },
-                      { label: language === 'ar' ? 'آخر تحديث' : 'Last Updated On', value: new Date(stats.lastDate).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }
+                      { label: language === 'ar' ? 'آخر تحديث' : 'Last Updated On', value: formatDisplayDate(stats.lastDate) }
                    ].map((stat, i) => (
                       <div key={i} className="bg-[#121E3D] border border-[#1C2E5A] p-6 rounded-2xl flex flex-col justify-between group hover:border-[#D4AF37]/30 transition-all shadow-xl shadow-black/20">
                          <div className="flex items-center justify-between mb-4">

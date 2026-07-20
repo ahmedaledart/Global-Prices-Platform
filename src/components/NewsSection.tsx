@@ -3,6 +3,7 @@ import { Newspaper, ChevronLeft, ChevronRight, AlertTriangle, ExternalLink, Cale
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
+import { formatDisplayDate } from '../utils/formatDate';
 
 export const NewsSection = ({ limit = 3 }: { limit?: number }) => {
   const { t, language } = useLanguage();
@@ -86,7 +87,7 @@ export const NewsSection = ({ limit = 3 }: { limit?: number }) => {
                     </span>
                     <span className="text-xs text-gray-500 flex items-center gap-1">
                       <Calendar size={12} />
-                      {new Date(item.created_at).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}
+                      {formatDisplayDate(item.created_at)}
                     </span>
                   </div>
                   

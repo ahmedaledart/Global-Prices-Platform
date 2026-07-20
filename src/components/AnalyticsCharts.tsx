@@ -10,6 +10,7 @@ import html2canvas from 'html2canvas';
 import { supabase } from '../lib/supabase';
 
 import { exportChartToPNG } from '../utils/exportChart';
+import { formatDisplayDate } from '../utils/formatDate';
 
 export const AnalyticsCharts = () => {
   const { data: commoditiesData } = useMarketData();
@@ -65,7 +66,7 @@ export const AnalyticsCharts = () => {
   const historyChartData = useMemo(() => {
     let rawData = historyData.map(item => ({
       date: item.recorded_at || item.created_at,
-      dateLabel: new Date(item.recorded_at || item.created_at).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US'),
+      dateLabel: formatDisplayDate(item.recorded_at || item.created_at),
       price: Number(item.price || 0),
       symbol: item.symbol,
       name: language === 'ar' ? item.name_ar : item.name_en

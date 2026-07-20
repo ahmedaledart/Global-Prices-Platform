@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { formatDisplayDateTime } from '../utils/formatDate';
 
 const logUserActivity = async (action: string, details: string) => {
   try {
@@ -337,7 +338,7 @@ export const AdvancedTable = ({ limit }: { limit?: number }) => {
         doc.setFontSize(9);
         doc.setFont('Cairo', 'normal');
         doc.setTextColor(100, 100, 100);
-        const dateStr = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
+        const dateStr = formatDisplayDateTime(new Date());
         // If it's AR, draw it on the right side
         if (language === 'ar') {
            doc.text(`تاريخ التقرير: ${dateStr}`, doc.internal.pageSize.width - data.settings.margin.right, 15, { align: 'right' });

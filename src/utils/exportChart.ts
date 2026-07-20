@@ -1,4 +1,5 @@
 import html2canvas from 'html2canvas';
+import { formatDisplayDate, formatDisplayDateTime } from './formatDate';
 
 interface ExportOptions {
   element: HTMLElement;
@@ -26,8 +27,7 @@ export const exportChartToPNG = async ({
 
   try {
     const now = new Date();
-    const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const dateTimeStr = formatDisplayDateTime(now);
     
     // Create an off-screen container
     const container = document.createElement('div');
@@ -104,7 +104,7 @@ export const exportChartToPNG = async ({
         <span style="font-weight: bold; color: ${textColor};">Source:</span> Global Prices Platform (GCP)
       </div>
       <div style="text-align: right;" dir="ltr">
-        <span style="margin-right: 15px;">Generated on: ${dateStr} ${timeStr}</span>
+        <span style="margin-right: 15px;">Generated on: ${dateTimeStr}</span>
         <span style="font-weight: bold;">© Libya Trade Network</span>
       </div>
     `;

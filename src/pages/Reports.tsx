@@ -5,6 +5,7 @@ import Markdown from 'react-markdown';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useMarketData } from '../context/MarketContext';
+import { formatDisplayDate } from '../utils/formatDate';
 
 export const Reports = () => {
   const { language } = useLanguage();
@@ -47,9 +48,7 @@ export const Reports = () => {
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
-    return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US', {
-      year: 'numeric', month: 'long', day: 'numeric'
-    });
+    return formatDisplayDate(dateStr);
   };
 
   if (loading) {

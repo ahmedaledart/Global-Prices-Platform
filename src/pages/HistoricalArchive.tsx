@@ -7,6 +7,7 @@ import { useMarketData } from '../context/MarketContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PriceDisplay } from '../components/PriceDisplay';
 import { exportChartToPNG } from '../utils/exportChart';
+import { formatDisplayDate } from '../utils/formatDate';
 
 export const HistoricalArchive = () => {
   const { t, language } = useLanguage();
@@ -63,10 +64,7 @@ export const HistoricalArchive = () => {
       if (filtered.length > 0) {
         const formatted = filtered.map(item => ({
           ...item,
-          time: new Date(item.recorded_at).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US', {
-            month: 'short',
-            day: 'numeric'
-          })
+          time: formatDisplayDate(item.recorded_at)
         }));
         const isMobile = window.innerWidth < 768;
         const maxPoints = isMobile ? 8 : 12;
@@ -115,7 +113,7 @@ export const HistoricalArchive = () => {
     try {
       const commodityName = language === 'ar' ? selectedComm.name_ar : selectedComm.name_en;
       const chartTitle = language === 'ar' ? 'البيانات التاريخية' : 'Historical Data';
-      const dateRangeStr = `${new Date(stats.firstDate).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US')} - ${new Date(stats.lastDate).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US')}`;
+      const dateRangeStr = `${formatDisplayDate(stats.firstDate)} - ${formatDisplayDate(stats.lastDate)}`;
       
       await exportChartToPNG({
         element: chartRef.current,
@@ -294,8 +292,8 @@ export const HistoricalArchive = () => {
                         { label: language === 'ar' ? 'أدنى سعر' : 'Lowest Price', value: stats.lowPrice.toFixed(2) },
                         { label: language === 'ar' ? 'مقدار التغير' : 'Change Value', value: `${changeVal >= 0 ? '+' : ''}${changeVal.toFixed(2)}`, color: changeVal >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]' },
                         { label: language === 'ar' ? 'نسبة التغير' : 'Change Percent', value: `${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}%`, color: changePct >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]' },
-                        { label: language === 'ar' ? 'تاريخ أول تسجيل' : 'First Recorded Date', value: new Date(stats.firstDate).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US') },
-                        { label: language === 'ar' ? 'تاريخ آخر تسجيل' : 'Last Recorded Date', value: new Date(stats.lastDate).toLocaleDateString(language === 'ar' ? 'ar-LY' : 'en-US') }
+                        { label: language === 'ar' ? 'تاريخ أول تسجيل' : 'First Recorded Date', value: formatDisplayDate(stats.firstDate) },
+                        { label: language === 'ar' ? 'تاريخ آخر تسجيل' : 'Last Recorded Date', value: formatDisplayDate(stats.lastDate) }
                      ].map((stat, i) => (
                         <div key={i} className="bg-[#0A1128] border border-[#1C2E5A] p-4 rounded-xl text-center">
                            <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">{stat.label}</div>
